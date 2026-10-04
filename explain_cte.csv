@@ -1,0 +1,113 @@
+QUERY PLAN
+Limit  (cost=4215650.43..4215650.46 rows=15 width=176) (actual time=1377.314..1377.320 rows=15.00 loops=1)
+"  Buffers: shared hit=10101, temp read=7533 written=9005"
+  CTE order_base
+    ->  Hash Left Join  (cost=8483.41..15759.42 rows=88592 width=106) (actual time=181.016..312.720 rows=99441.00 loops=1)
+          Hash Cond: (o.order_id = i.order_id)
+"          Buffers: shared hit=5557, temp read=1986 written=2718"
+          ->  Hash Join  (cost=4246.25..10846.74 rows=88592 width=104) (actual time=31.326..108.369 rows=99441.00 loops=1)
+                Hash Cond: (o.customer_id = c.customer_id)
+"                Buffers: shared hit=3258, temp read=1191 written=1191"
+                ->  Seq Scan on olist_orders o  (cost=0.00..2693.92 rows=88592 width=104) (actual time=0.008..10.127 rows=99441.00 loops=1)
+                      Buffers: shared hit=1808
+                ->  Hash  (cost=2291.00..2291.00 rows=84100 width=64) (actual time=31.302..31.302 rows=99441.00 loops=1)
+                      Buckets: 131072  Batches: 2  Memory Usage: 5808kB
+"                      Buffers: shared hit=1450, temp written=519"
+                      ->  Seq Scan on olist_customers c  (cost=0.00..2291.00 rows=84100 width=64) (actual time=0.003..8.633 rows=99441.00 loops=1)
+                            Buffers: shared hit=1450
+          ->  Hash  (cost=4234.66..4234.66 rows=200 width=64) (actual time=149.680..149.680 rows=98666.00 loops=1)
+                Buckets: 131072 (originally 1024)  Batches: 1 (originally 1)  Memory Usage: 7956kB
+"                Buffers: shared hit=2299, temp read=795 written=1527"
+                ->  Subquery Scan on i  (cost=4230.16..4234.66 rows=200 width=64) (actual time=64.971..137.757 rows=98666.00 loops=1)
+"                      Buffers: shared hit=2299, temp read=795 written=1527"
+                      ->  HashAggregate  (cost=4230.16..4232.66 rows=200 width=64) (actual time=64.970..130.689 rows=98666.00 loops=1)
+                            Group Key: olist_order_items.order_id
+                            Batches: 21  Memory Usage: 8265kB  Disk Usage: 7408kB
+"                            Buffers: shared hit=2299, temp read=795 written=1527"
+                            ->  Seq Scan on olist_order_items  (cost=0.00..3402.52 rows=110352 width=64) (actual time=0.013..8.232 rows=112650.00 loops=1)
+                                  Buffers: shared hit=2299
+  ->  Sort  (cost=4199891.00..4199891.50 rows=200 width=176) (actual time=1377.313..1377.316 rows=15.00 loops=1)
+"        Sort Key: (COALESCE(sum(ob.order_total) FILTER (WHERE ob.is_valid), '0'::numeric)) DESC"
+        Sort Method: top-N heapsort  Memory: 28kB
+"        Buffers: shared hit=10101, temp read=7533 written=9005"
+        ->  Merge Left Join  (cost=4187746.98..4199886.10 rows=200 width=176) (actual time=940.440..1356.011 rows=96096.00 loops=1)
+              Merge Cond: (ob.customer_unique_id = t.customer_unique_id)
+"              Buffers: shared hit=10101, temp read=7533 written=9005"
+              ->  GroupAggregate  (cost=15943.07..26675.21 rows=200 width=148) (actual time=480.647..731.917 rows=96096.00 loops=1)
+"                    Group Key: ob.customer_unique_id, (((max(olist_orders.order_purchase_timestamp))::date + 1))"
+"                    Buffers: shared hit=7365, temp read=2801 written=4735"
+                    ->  Incremental Sort  (cost=15943.07..24675.39 rows=88592 width=110) (actual time=480.632..635.455 rows=99441.00 loops=1)
+"                          Sort Key: ob.customer_unique_id, (((max(olist_orders.order_purchase_timestamp))::date + 1)), ob.purchase_ts DESC"
+                          Presorted Key: ob.customer_unique_id
+                          Full-sort Groups: 3104  Sort Method: quicksort  Average Memory: 27kB  Peak Memory: 27kB
+"                          Buffers: shared hit=7365, temp read=2801 written=4735"
+                          ->  Nested Loop  (cost=15904.78..19669.92 rows=88592 width=110) (actual time=480.542..606.526 rows=99441.00 loops=1)
+"                                Buffers: shared hit=7365, temp read=2801 written=4735"
+                                ->  WindowAgg  (cost=12989.38..14761.18 rows=88592 width=138) (actual time=469.950..573.280 rows=99441.00 loops=1)
+                                      Window: w1 AS (PARTITION BY ob.customer_unique_id ORDER BY ob.purchase_ts RANGE BETWEEN '30 days'::interval PRECEDING AND CURRENT ROW)
+                                      Storage: Memory  Maximum Storage: 17kB
+"                                      Buffers: shared hit=5557, temp read=2801 written=4735"
+                                      ->  Sort  (cost=12989.34..13210.82 rows=88592 width=74) (actual time=469.933..490.944 rows=99441.00 loops=1)
+"                                            Sort Key: ob.customer_unique_id, ob.purchase_ts"
+                                            Sort Method: external merge  Disk: 6520kB
+"                                            Buffers: shared hit=5557, temp read=2801 written=4735"
+                                            ->  CTE Scan on order_base ob  (cost=0.00..1771.84 rows=88592 width=74) (actual time=181.019..358.691 rows=99441.00 loops=1)
+                                                  Storage: Disk  Maximum Storage: 9606kB
+"                                                  Buffers: shared hit=5557, temp read=1986 written=3918"
+                                ->  Materialize  (cost=2915.40..2915.42 rows=1 width=4) (actual time=0.000..0.000 rows=1.00 loops=99441)
+                                      Storage: Memory  Maximum Storage: 17kB
+                                      Buffers: shared hit=1808
+                                      ->  Aggregate  (cost=2915.40..2915.42 rows=1 width=4) (actual time=10.573..10.573 rows=1.00 loops=1)
+                                            Buffers: shared hit=1808
+                                            ->  Seq Scan on olist_orders  (cost=0.00..2693.92 rows=88592 width=8) (actual time=0.017..5.632 rows=99441.00 loops=1)
+                                                  Buffers: shared hit=1808
+              ->  Materialize  (cost=4171803.91..4173204.39 rows=200 width=64) (actual time=459.784..547.385 rows=94983.00 loops=1)
+                    Storage: Memory  Maximum Storage: 17kB
+"                    Buffers: shared hit=2736, temp read=4732 written=4270"
+                    ->  Subquery Scan on t  (cost=4171803.91..4173203.89 rows=200 width=64) (actual time=459.781..524.237 rows=94983.00 loops=1)
+                          Filter: (t.rn = 1)
+"                          Buffers: shared hit=2736, temp read=4732 written=4270"
+                          ->  WindowAgg  (cost=4171803.91..4172703.89 rows=40000 width=104) (actual time=459.780..516.950 rows=94983.00 loops=1)
+"                                Window: w1 AS (PARTITION BY ob_1.customer_unique_id ORDER BY (sum(oi.price)), (COALESCE(p.product_category_name, 'unknown'::text)) ROWS UNBOUNDED PRECEDING)"
+                                Run Condition: (row_number() OVER w1 <= 1)
+                                Storage: Memory  Maximum Storage: 17kB
+"                                Buffers: shared hit=2736, temp read=4732 written=4270"
+                                ->  Sort  (cost=4171803.89..4171903.89 rows=40000 width=96) (actual time=459.767..486.803 rows=97460.00 loops=1)
+"                                      Sort Key: ob_1.customer_unique_id, (sum(oi.price)) DESC, (COALESCE(p.product_category_name, 'unknown'::text))"
+                                      Sort Method: external merge  Disk: 6208kB
+"                                      Buffers: shared hit=2736, temp read=4732 written=4270"
+                                      ->  HashAggregate  (cost=3545629.15..4166695.34 rows=40000 width=96) (actual time=305.970..358.959 rows=97460.00 loops=1)
+"                                            Group Key: ob_1.customer_unique_id, COALESCE(p.product_category_name, 'unknown'::text)"
+                                            Planned Partitions: 4  Batches: 21  Memory Usage: 8249kB  Disk Usage: 7608kB
+"                                            Buffers: shared hit=2736, temp read=3956 written=3492"
+                                            ->  Merge Join  (cost=24134.66..391243.43 rows=24440761 width=80) (actual time=185.446..267.270 rows=112101.00 loops=1)
+                                                  Merge Cond: (ob_1.order_id = oi.order_id)
+"                                                  Buffers: shared hit=2736, temp read=3014 written=1818"
+                                                  ->  Sort  (cost=5190.36..5301.10 rows=44296 width=64) (actual time=114.906..133.091 rows=98207.00 loops=1)
+                                                        Sort Key: ob_1.order_id
+                                                        Sort Method: external merge  Disk: 7320kB
+                                                        Buffers: temp read=2116 written=918
+                                                        ->  CTE Scan on order_base ob_1  (cost=0.00..1771.84 rows=44296 width=64) (actual time=0.051..12.916 rows=98207.00 loops=1)
+                                                              Filter: is_valid
+                                                              Rows Removed by Filter: 1234
+                                                              Storage: Disk  Maximum Storage: 9606kB
+                                                              Buffers: temp read=1201 written=1
+                                                  ->  Materialize  (cost=18944.30..19496.06 rows=110352 width=80) (actual time=70.533..95.549 rows=112650.00 loops=1)
+                                                        Storage: Memory  Maximum Storage: 18kB
+"                                                        Buffers: shared hit=2736, temp read=898 written=900"
+                                                        ->  Sort  (cost=18944.30..19220.18 rows=110352 width=80) (actual time=70.530..84.055 rows=112650.00 loops=1)
+                                                              Sort Key: oi.order_id
+                                                              Sort Method: external merge  Disk: 7184kB
+"                                                              Buffers: shared hit=2736, temp read=898 written=900"
+                                                              ->  Hash Left Join  (cost=1105.61..4797.85 rows=110352 width=80) (actual time=6.685..41.109 rows=112650.00 loops=1)
+                                                                    Hash Cond: (oi.product_id = p.product_id)
+                                                                    Buffers: shared hit=2736
+                                                                    ->  Seq Scan on olist_order_items oi  (cost=0.00..3402.52 rows=110352 width=80) (actual time=0.015..6.992 rows=112650.00 loops=1)
+                                                                          Buffers: shared hit=2299
+                                                                    ->  Hash  (cost=734.16..734.16 rows=29716 width=64) (actual time=6.653..6.653 rows=32951.00 loops=1)
+                                                                          Buckets: 65536 (originally 32768)  Batches: 1 (originally 1)  Memory Usage: 3108kB
+                                                                          Buffers: shared hit=437
+                                                                          ->  Seq Scan on olist_products p  (cost=0.00..734.16 rows=29716 width=64) (actual time=0.007..2.590 rows=32951.00 loops=1)
+                                                                                Buffers: shared hit=437
+Planning Time: 0.504 ms
+Execution Time: 1392.901 ms

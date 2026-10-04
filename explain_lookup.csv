@@ -1,0 +1,19 @@
+QUERY PLAN
+Nested Loop  (cost=2711.92..2719.94 rows=1 width=176) (actual time=15.676..15.677 rows=1.00 loops=1)
+  Buffers: shared hit=1451 read=3
+  ->  Limit  (cost=2711.50..2711.50 rows=1 width=32) (actual time=15.631..15.631 rows=1.00 loops=1)
+        Buffers: shared hit=1450
+        ->  Sort  (cost=2711.50..2921.75 rows=84100 width=32) (actual time=15.630..15.630 rows=1.00 loops=1)
+              Sort Key: olist_customers.customer_unique_id
+              Sort Method: still in progress  Memory: 0kB
+              Buffers: shared hit=1450
+              ->  Seq Scan on olist_customers  (cost=0.00..2291.00 rows=84100 width=32) (actual time=0.024..7.414 rows=99441.00 loops=1)
+                    Buffers: shared hit=1450
+  ->  Index Scan using ux_mv_customer_features_customer_id on mv_customer_features mv  (cost=0.42..8.44 rows=1 width=176) (actual time=0.040..0.040 rows=1.00 loops=1)
+        Index Cond: (customer_id = olist_customers.customer_unique_id)
+        Index Searches: 1
+        Buffers: shared hit=1 read=3
+Planning:
+  Buffers: shared hit=9
+Planning Time: 0.305 ms
+Execution Time: 15.694 ms

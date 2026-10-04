@@ -1,0 +1,16 @@
+QUERY PLAN
+Limit  (cost=4360.14..4361.85 rows=15 width=176) (actual time=10.698..11.244 rows=15.00 loops=1)
+  Buffers: shared hit=1445
+  ->  Gather Merge  (cost=4360.14..15312.26 rows=96096 width=176) (actual time=10.697..11.242 rows=15.00 loops=1)
+        Workers Planned: 1
+        Workers Launched: 1
+        Buffers: shared hit=1445
+        ->  Sort  (cost=3360.13..3501.45 rows=56527 width=176) (actual time=8.432..8.433 rows=10.50 loops=2)
+              Sort Key: monetary DESC
+              Sort Method: top-N heapsort  Memory: 28kB
+              Buffers: shared hit=1445
+              Worker 0:  Sort Method: top-N heapsort  Memory: 28kB
+              ->  Parallel Seq Scan on mv_customer_features  (cost=0.00..1973.27 rows=56527 width=176) (actual time=0.008..3.301 rows=48048.00 loops=2)
+                    Buffers: shared hit=1408
+Planning Time: 0.123 ms
+Execution Time: 11.266 ms
